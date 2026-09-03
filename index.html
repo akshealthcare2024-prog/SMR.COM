@@ -1718,11 +1718,13 @@ function calendarRow(r,rowIndex){
         const s=Math.max(toMin(b.start),dayStart), e=Math.min(toMin(b.end),dayEnd);
         const left=((s-dayStart)/span*100).toFixed(2), width=((e-s)/span*100).toFixed(2);
         const emp = USERS.find(u=>u.id===b.empId);
+        const dept = b.deptInput || (emp && emp.dept) || '';
+        const mobile = b.mobile || (emp && emp.mobile) || '';
         return `<div class="cal-block" style="left:${left}%;width:${width}%;background:${colors[b.status]};">${b.start}&ndash;${b.end}
           <div class="cal-tooltip${tooltipClass}">
             <div class="ct-name">${esc(b.empName)}</div>
-            <div class="ct-row"><span class="ct-label">Department</span><span>${emp&&emp.dept?esc(emp.dept):'&mdash;'}</span></div>
-            <div class="ct-row"><span class="ct-label">Mobile</span><span>${emp&&emp.mobile?esc(emp.mobile):'&mdash;'}</span></div>
+            <div class="ct-row"><span class="ct-label">Department</span><span>${dept?esc(dept):'&mdash;'}</span></div>
+            <div class="ct-row"><span class="ct-label">Mobile</span><span>${mobile?esc(mobile):'&mdash;'}</span></div>
             <div class="ct-row"><span class="ct-label">Purpose</span><span>${b.purpose?esc(b.purpose):'&mdash;'}</span></div>
             <div class="ct-row"><span class="ct-label">Time</span><span>${b.start}&ndash;${b.end}</span></div>
           </div>
