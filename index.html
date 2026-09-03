@@ -1567,7 +1567,8 @@ function viewMyBookings(){
       ${mine.length ? `<table><thead><tr><th>Date</th><th>Time</th><th>Room</th><th>Purpose</th><th>Status</th><th></th></tr></thead><tbody>
         ${mine.map(b=>{
           const r = roomById(b.roomId);
-          const canAct = b.status==='Pending' || b.status==='Approved';
+          const canCancel = b.status==='Pending' || b.status==='Approved';
+          const canReschedule = b.status==='Pending';
           return `<tr>
             <td class="mono">${fmtDate(b.date)}</td>
             <td class="mono">${b.start}&ndash;${b.end}</td>
@@ -1576,8 +1577,9 @@ function viewMyBookings(){
             <td>${statusPill(b.status)}${b.status==='Cancelled'&&b.cancelReason?`<div style="font-size:11px;color:var(--slate);margin-top:3px;">${esc(b.cancelReason)}</div>`:''}</td>
             <td style="text-align:right;white-space:nowrap;">
               <button class="btn btn-ghost btn-sm" onclick="viewBookingDetail('${b.id}')">View</button>
-              ${canAct?`<button class="btn btn-ghost btn-sm" onclick="startReschedule('${b.id}')">Reschedule</button>`:''}
-              ${canAct?`<button class="btn btn-danger btn-sm" onclick="cancelBooking('${b.id}')">Cancel</button>`:''}
+              ${canReschedule?`<button class="btn btn-ghost btn-sm" onclick="startReschedule('${b.id}')">Reschedule</button>`:''}
+              ${b.status==='Approved'?`<span class="hint" style="margin-right:6px;white-space:normal;">Reschedule via Admin only</span>`:''}
+              ${canCancel?`<button class="btn btn-danger btn-sm" onclick="cancelBooking('${b.id}')">Cancel</button>`:''}
             </td>
           </tr>`;
         }).join('')}
@@ -1780,10 +1782,10 @@ function viewAdminBookings(){
       <div class="field" style="margin:0;"><label>From date</label><input type="date" id="bkFromDate" value="${state.bookingsFromDate}" onchange="setBookingsDateRange()"/></div>
       <div class="field" style="margin:0;"><label>To date</label><input type="date" id="bkToDate" value="${state.bookingsToDate}" onchange="setBookingsDateRange()"/></div>
       ${hasFilter?`<button class="btn btn-ghost btn-sm" onclick="clearBookingsDateRange()">${ICON.x} Clear dates</button>`:''}
-      ${hasFilter?`<span class="hint" style="margin:0;">Showing ${list.length} booking${list.length===1?'':'s'}${state.bookingsFromDate?` from ${fmtDate(state.bookingsFromDate)}`:''}${state.bookingsToDate?` to ${fmtDate(state.bookingsToDate)}`:''}</span>`:''}
+      ${hasFilter?`<span class="hint" style="margin:0;">Showing ${list.length} booking${list.length===1?'':'s'}${state.bookingsFromDate?` from ${fmtDate(state.bookingsFromDate)}`:''}${state.bookingsToDate?` to ${fmtDate(state.bookingsToDate)}`:''}</span>`:`<span class="hint" style="margin:0;">Pick a date range to see how many bookings are Pending / Approved / Rejected / Cancelled / Completed within it &mdash; the counts next to each tab below update to match.</span>`}
     </div>
     <div class="tabs">
-      ${tabs.map(t=>`<button class="tab-btn ${state.bookingsTab===t?'active':''}" onclick="setBookingsTab('${t}')">${t} ${t!=='All'?'('+BOOKINGS.filter(b=>b.status===t).length+')':''}</button>`).join('')}
+      ${tabs.map(t=>`<button class="tab-btn ${state.bookingsTab===t?'active':''}" onclick="setBookingsTab('${t}')">${t} ${t!=='All'?'('+BOOKINGS.filter(b=>b.status===t && inRange(b.date)).length+')':''}</button>`).join('')}
     </div>
     <div class="card">
       ${list.length ? `<table><thead><tr><th>Date</th><th>Status</th><th></th></tr></thead><tbody>
