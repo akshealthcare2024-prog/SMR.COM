@@ -1293,7 +1293,7 @@ function viewEmployeeHome(){
       </button>
       <button class="action-tile" onclick="goView('mybookings')">
         <div class="ic" style="background:var(--amber-pale);color:#96690F;">${ICON.list}</div>
-        <div><b>My Bookings</b><br><span>View, cancel or reschedule</span></div>
+        <div><b>My Bookings</b><br><span>View or cancel your bookings</span></div>
       </button>
       <button class="action-tile" onclick="goView('calendar')">
         <div class="ic" style="background:var(--coral-pale);color:var(--coral);">${ICON.calendar}</div>
@@ -1568,7 +1568,6 @@ function viewMyBookings(){
         ${mine.map(b=>{
           const r = roomById(b.roomId);
           const canCancel = b.status==='Pending' || b.status==='Approved';
-          const canReschedule = b.status==='Pending';
           return `<tr>
             <td class="mono">${fmtDate(b.date)}</td>
             <td class="mono">${b.start}&ndash;${b.end}</td>
@@ -1577,8 +1576,6 @@ function viewMyBookings(){
             <td>${statusPill(b.status)}${b.status==='Cancelled'&&b.cancelReason?`<div style="font-size:11px;color:var(--slate);margin-top:3px;">${esc(b.cancelReason)}</div>`:''}</td>
             <td style="text-align:right;white-space:nowrap;">
               <button class="btn btn-ghost btn-sm" onclick="viewBookingDetail('${b.id}')">View</button>
-              ${canReschedule?`<button class="btn btn-ghost btn-sm" onclick="startReschedule('${b.id}')">Reschedule</button>`:''}
-              ${b.status==='Approved'?`<span class="hint" style="margin-right:6px;white-space:normal;">Reschedule via Admin only</span>`:''}
               ${canCancel?`<button class="btn btn-danger btn-sm" onclick="cancelBooking('${b.id}')">Cancel</button>`:''}
             </td>
           </tr>`;
