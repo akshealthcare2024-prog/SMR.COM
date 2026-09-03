@@ -1072,6 +1072,8 @@ const state = {
   loginRole: 'employee',
   view: 'home',
   bookingsTab: 'Pending',
+  bookingsFromDate: '',
+  bookingsToDate: '',
   reportsTab: 'department',
   bookingDraft: null,       // {date,start,end,participants} for booking flow
   editingBookingId: null,   // when rescheduling
@@ -1484,9 +1486,14 @@ function submitBooking(editId, roomId){
   const u = state.currentUser;
   if(editId){
     const b = BOOKINGS.find(x=>x.id===editId);
+    const isAdminActing = state.currentUser.role !== 'employee';
     Object.assign(b,{empName,empIdInput,deptInput,date,start,end,participants,purpose,snacks,snacksDetail,lunch,lunchDetail,email,mobile,status:'Pending',approvedBy:''});
     pushToast('Booking rescheduled and resent for approval.','success');
-    USERS.filter(x=>x.role==='admin'||x.role==='superadmin').forEach(a=>addNotification(a.id, `${empName} rescheduled a booking for ${roomById(roomId).name}.`,'info'));
+    if(isAdminActing){
+      addNotification(b.empId, `Admin rescheduled your booking for ${roomById(roomId).name} to ${fmtDate(date)}, ${start}\u2013${end}. It is pending approval again.`, 'info');
+    } else {
+      USERS.filter(x=>x.role==='admin'||x.role==='superadmin').forEach(a=>addNotification(a.id, `${empName} rescheduled a booking for ${roomById(roomId).name}.`,'info'));
+    }
   } else {
     bookingSeq++;
     const nb = {id:'BK-'+bookingSeq, roomId, empId:u.id, empName,empIdInput,deptInput, date,start,end,participants,purpose,snacks,snacksDetail,lunch,lunchDetail,email,mobile,status:'Pending',approvedBy:'',created:TODAY,cancelReason:''};
@@ -1497,7 +1504,7 @@ function submitBooking(editId, roomId){
   state.editingBookingId=null; state.bookingDraft=null;
   closeModal();
   saveSharedState();
-  goView(editId ? 'mybookings' : 'mybookings');
+  goView(state.currentUser.role==='employee' ? 'mybookings' : 'bookings');
 }
 
 /* ============================ EMPLOYEE: CHECK AVAILABILITY ============================ */
@@ -1764,9 +1771,17 @@ function viewDashboard(){
 /* ============================ ADMIN: APPROVALS & BOOKINGS ============================ */
 function viewAdminBookings(){
   const tabs = ['Pending','Approved','Rejected','Cancelled','Completed','All'];
-  const list = BOOKINGS.filter(b=> state.bookingsTab==='All' ? true : b.status===state.bookingsTab)
+  const inRange = (d) => (!state.bookingsFromDate || d>=state.bookingsFromDate) && (!state.bookingsToDate || d<=state.bookingsToDate);
+  const list = BOOKINGS.filter(b=> (state.bookingsTab==='All' ? true : b.status===state.bookingsTab) && inRange(b.date))
     .sort((a,b)=> (a.date+a.start) < (b.date+b.start) ? 1:-1);
+  const hasFilter = state.bookingsFromDate || state.bookingsToDate;
   return `
+    <div class="card" style="margin-bottom:16px;display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
+      <div class="field" style="margin:0;"><label>From date</label><input type="date" id="bkFromDate" value="${state.bookingsFromDate}" onchange="setBookingsDateRange()"/></div>
+      <div class="field" style="margin:0;"><label>To date</label><input type="date" id="bkToDate" value="${state.bookingsToDate}" onchange="setBookingsDateRange()"/></div>
+      ${hasFilter?`<button class="btn btn-ghost btn-sm" onclick="clearBookingsDateRange()">${ICON.x} Clear dates</button>`:''}
+      ${hasFilter?`<span class="hint" style="margin:0;">Showing ${list.length} booking${list.length===1?'':'s'}${state.bookingsFromDate?` from ${fmtDate(state.bookingsFromDate)}`:''}${state.bookingsToDate?` to ${fmtDate(state.bookingsToDate)}`:''}</span>`:''}
+    </div>
     <div class="tabs">
       ${tabs.map(t=>`<button class="tab-btn ${state.bookingsTab===t?'active':''}" onclick="setBookingsTab('${t}')">${t} ${t!=='All'?'('+BOOKINGS.filter(b=>b.status===t).length+')':''}</button>`).join('')}
     </div>
@@ -1779,13 +1794,24 @@ function viewAdminBookings(){
             <td style="text-align:right;white-space:nowrap;">
               <button class="btn btn-ghost btn-sm" onclick="viewBookingDetail('${b.id}')">View</button>
               ${b.status==='Pending'?`<button class="btn btn-green btn-sm" onclick="approveBooking('${b.id}')">Approve</button><button class="btn btn-danger btn-sm" onclick="rejectBookingPrompt('${b.id}')">Reject</button>`:''}
+              ${(b.status==='Pending'||b.status==='Approved')?`<button class="btn btn-ghost btn-sm" onclick="startReschedule('${b.id}')">Reschedule</button>`:''}
               ${(b.status==='Pending'||b.status==='Approved')?`<button class="btn btn-ghost btn-sm" onclick="adminCancelBooking('${b.id}')">Cancel</button>`:''}
             </td>
           </tr>`;
         }).join('')}
-      </tbody></table>` : emptyState('inbox','Nothing here', 'No bookings currently match this filter.')}
+      </tbody></table>` : emptyState('inbox','Nothing here', hasFilter ? 'No bookings in this date range match the filter.' : 'No bookings currently match this filter.')}
     </div>
   `;
+}
+function setBookingsDateRange(){
+  state.bookingsFromDate = document.getElementById('bkFromDate').value;
+  state.bookingsToDate = document.getElementById('bkToDate').value;
+  renderView();
+}
+function clearBookingsDateRange(){
+  state.bookingsFromDate = '';
+  state.bookingsToDate = '';
+  renderView();
 }
 function setBookingsTab(t){ state.bookingsTab=t; renderView(); }
 function sendBookingStatusEmail(b, status){
